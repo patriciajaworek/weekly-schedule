@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Cleo" />
+  <title>Cleo — Patricia's Schedule</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --surface: #f7f6f3;
+      --border: #eae8e3;
+      --text: #1c1c1e;
+      --muted: #8e8e93;
+
+      /* pastel card backgrounds */
+      --gold-bg: #fef6e4;
+      --gold-border: #e8c070;
+      --gold-text: #8b6200;
+
+      --green-bg: #e8f7ee;
+      --green-border: #7dc8a0;
+      --green-text: #1e6b40;
+
+      --blue-bg: #e8f1fb;
+      --blue-border: #7eb2e8;
+      --blue-text: #2b6cb0;
+
+      --coral-bg: #fef0ee;
+      --coral-border: #eca090;
+      --coral-text: #b04838;
+
+      --purple-bg: #f2effe;
+      --purple-border: #b8a8e8;
+      --purple-text: #6040c0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* HEADER */
+    .header {
+      padding: 52px 20px 16px;
+      padding-top: calc(52px + env(safe-area-inset-top));
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-top {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+    .moon { font-size: 18px; }
+    .header-sub {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* DAY NAV */
+    .day-nav {
+      display: flex;
+      gap: 6px;
+      padding: 12px 20px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      background: var(--bg);
+      position: sticky;
+      top: 97px;
+      z-index: 99;
+      border-bottom: 1px solid var(--border);
+    }
+    .day-nav::-webkit-scrollbar { display: none; }
+    .day-btn {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .day-btn.active {
+      background: var(--gold-bg);
+      border-color: var(--gold-border);
+      color: var(--gold-text);
+      font-weight: 600;
+    }
+    .day-btn.today-btn {
+      border-color: var(--gold-border);
+      color: var(--gold-text);
+    }
+
+    /* CONTENT */
+    .content {
+      padding: 20px;
+      display: none;
+    }
+    .content.active { display: block; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      margin-top: 24px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    /* TIME BLOCKS */
+    .block {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 8px;
+      align-items: flex-start;
+    }
+    .block-time {
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 60px;
+      padding-top: 13px;
+      text-align: right;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .block-card {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 14px;
+      border-left: 3px solid var(--border);
+    }
+    .block-card.accent-gold   { background: var(--gold-bg);   border-color: var(--gold-border);   border-left: 3px solid var(--gold-border); }
+    .block-card.accent-green  { background: var(--green-bg);  border-color: var(--green-border);  border-left: 3px solid var(--green-border); }
+    .block-card.accent-blue   { background: var(--blue-bg);   border-color: var(--blue-border);   border-left: 3px solid var(--blue-border); }
+    .block-card.accent-coral  { background: var(--coral-bg);  border-color: var(--coral-border);  border-left: 3px solid var(--coral-border); }
+    .block-card.accent-purple { background: var(--purple-bg); border-color: var(--purple-border); border-left: 3px solid var(--purple-border); }
+    .block-card.accent-muted  { background: var(--surface);   border-color: var(--border);        border-left: 3px solid var(--border); }
+
+    .block-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .block-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+    .block-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      margin-top: 5px;
+      text-transform: uppercase;
+    }
+    .tag-work    { background: #d4e8f8; color: var(--blue-text); }
+    .tag-fitness { background: #c8edd8; color: var(--green-text); }
+    .tag-content { background: #fdeac0; color: var(--gold-text); }
+    .tag-jobs    { background: #e0d8f8; color: var(--purple-text); }
+    .tag-life    { background: #fad8d0; color: var(--coral-text); }
+
+    /* MORNING / EVENING BOOKEND */
+    .routine-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+    }
+    .routine-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .routine-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .routine-row:first-child { padding-top: 0; }
+    .routine-time { font-size: 12px; color: var(--muted); min-width: 52px; }
+    .routine-text { font-size: 13px; color: var(--text); flex: 1; padding-left: 12px; }
+    .routine-text strong { color: var(--gold-text); }
+
+    /* TODAY BANNER */
+    .today-banner {
+      background: var(--gold-bg);
+      border: 1px solid var(--gold-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--gold-text);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* WEEKEND / EASY DAY */
+    .easy-day {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .easy-day .icon { font-size: 32px; margin-bottom: 8px; }
+    .easy-day p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+    .easy-day strong { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <span class="moon">🌙</span>
+    <h1>Patricia's Week</h1>
+  </div>
+  <div class="header-sub" id="todayLabel">Loading...</div>
+</div>
+
+<div class="day-nav" id="dayNav">
+  <button class="day-btn" onclick="showDay(0)">Mon</button>
+  <button class="day-btn" onclick="showDay(1)">Tue</button>
+  <button class="day-btn" onclick="showDay(2)">Wed</button>
+  <button class="day-btn" onclick="showDay(3)">Thu</button>
+  <button class="day-btn" onclick="showDay(4)">Fri</button>
+  <button class="day-btn" onclick="showDay(5)">Sat</button>
+  <button class="day-btn" onclick="showDay(6)">Sun</button>
+</div>
+
+<!-- MONDAY -->
+<div class="content" id="day-0">
+  <div class="section-label">Morning</div>
+  <div class="block">
+    <div class="block-time">7:00</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Wake up + walk Lumi</div>
+      <div class="block-note">~20 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:20</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Morning stretch</div>
+      <div class="block-note">5–10 min · While Lumi eats</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Shower + get ready</div>
+      <div class="block-note">30–40 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:10</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Breakfast</div>
+      <div class="block-note">Sit down · Eat something real · Non-negotiable</div>
+      <span class="block-tag tag-life">Health</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">At desk</div>
+    </div>
+  </div>
+
+  <div class="section-label">Work</div>
+  <div class="block">
+    <div class="block-time">9:00</div>
+    <div class="block-card accent-blue">
+      <div class="block-title">NTI — WFH</div>
+      <div class="block-note">Until 5:00pm</div>
+      <span class="block-tag tag-work">Work</span>
+    </div>
+  </div>
+
+  <div class="section-label">Evening</div>
+  <div class="block">
+    <div class="block-time">5:15</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Walk Lumi</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">5:45</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Run #1</div>
+      <div class="block-note">30–45 min</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">6:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Shower</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:00</div>
+    <div class="block-card accent-gold">
+      <div class="block-title">Lumi content — edit + schedule</div>
+      <div class="block-note">1 hr · Edit clips from weekend batch</div>
+      <span class="block-tag tag-content">Content</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:00</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Wind-down yoga</div>
+      <div class="block-note">20 min</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Free evening</div>
+      <div class="block-note">Dinner, rest, whatever you need</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">11:00</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Reading</div>
+      <div class="block-note">30 min · No screens · 11:30pm sleep</div>
+      <span class="block-tag tag-life">Wind Down</span>
+    </div>
+  </div>
+</div>
+
+<!-- TUESDAY -->
+<div class="content" id="day-1">
+  <div class="section-label">Morning</div>
+  <div class="block">
+    <div class="block-time">7:00</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Wake up + walk Lumi</div>
+      <div class="block-note">~20 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:20</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Morning stretch</div>
+      <div class="block-note">5–10 min · While Lumi eats</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Shower + get ready</div>
+      <div class="block-note">30–40 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:10</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Breakfast</div>
+      <div class="block-note">Sit down · Eat something real · Non-negotiable</div>
+      <span class="block-tag tag-life">Health</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Leave for office</div>
+      <div class="block-note">Commute</div>
+    </div>
+  </div>
+
+  <div class="section-label">Work — Team Day</div>
+  <div class="block">
+    <div class="block-time">9:30</div>
+    <div class="block-card accent-blue">
+      <div class="block-title">NTI — Office</div>
+      <div class="block-note">Until 5:30pm · Full focus, team day</div>
+      <span class="block-tag tag-work">Work</span>
+    </div>
+  </div>
+
+  <div class="section-label">Evening</div>
+  <div class="block">
+    <div class="block-time">6:00</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Home + decompress</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">6:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Walk Lumi</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:00</div>
+    <div class="block-card accent-purple">
+      <div class="block-title">Job search</div>
+      <div class="block-note">1 hr · Applications, LinkedIn, outreach</div>
+      <span class="block-tag tag-jobs">Job Search</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:00</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Wind-down yoga</div>
+      <div class="block-note">20 min</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Free evening</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">11:00</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Reading</div>
+      <div class="block-note">30 min · No screens · 11:30pm sleep</div>
+      <span class="block-tag tag-life">Wind Down</span>
+    </div>
+  </div>
+</div>
+
+<!-- WEDNESDAY -->
+<div class="content" id="day-2">
+  <div class="section-label">Morning</div>
+  <div class="block">
+    <div class="block-time">7:00</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Wake up + walk Lumi</div>
+      <div class="block-note">~20 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:20</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Morning stretch</div>
+      <div class="block-note">5–10 min · While Lumi eats</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Shower + get ready</div>
+      <div class="block-note">30–40 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:10</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Breakfast</div>
+      <div class="block-note">Sit down · Eat something real · Non-negotiable</div>
+      <span class="block-tag tag-life">Health</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">At desk</div>
+    </div>
+  </div>
+
+  <div class="section-label">Work</div>
+  <div class="block">
+    <div class="block-time">9:00</div>
+    <div class="block-card accent-blue">
+      <div class="block-title">NTI — Flex day</div>
+      <div class="block-note">WFH 9–5 or office 9:30–5:30</div>
+      <span class="block-tag tag-work">Work</span>
+    </div>
+  </div>
+
+  <div class="section-label">Evening</div>
+  <div class="block">
+    <div class="block-time">5:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Walk Lumi</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">6:00</div>
+    <div class="block-card accent-gold">
+      <div class="block-title">Lumi content — prep + planning</div>
+      <div class="block-note">1 hr · Brainstorm, captions, content calendar</div>
+      <span class="block-tag tag-content">Content</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:00</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Strength training</div>
+      <div class="block-note">30–40 min · Bodyweight at home</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:45</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Wind-down yoga</div>
+      <div class="block-note">15 min</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:00</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Free evening</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">11:00</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Reading</div>
+      <div class="block-note">30 min · No screens · 11:30pm sleep</div>
+      <span class="block-tag tag-life">Wind Down</span>
+    </div>
+  </div>
+</div>
+
+<!-- THURSDAY -->
+<div class="content" id="day-3">
+  <div class="section-label">Morning</div>
+  <div class="block">
+    <div class="block-time">7:00</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Wake up + walk Lumi</div>
+      <div class="block-note">~20 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:20</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Morning stretch</div>
+      <div class="block-note">5–10 min · While Lumi eats</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Shower + get ready</div>
+      <div class="block-note">30–40 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:10</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Breakfast</div>
+      <div class="block-note">Sit down · Eat something real · Non-negotiable</div>
+      <span class="block-tag tag-life">Health</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">At desk</div>
+    </div>
+  </div>
+
+  <div class="section-label">Work</div>
+  <div class="block">
+    <div class="block-time">9:00</div>
+    <div class="block-card accent-blue">
+      <div class="block-title">NTI — Flex day</div>
+      <div class="block-note">WFH 9–5 or office 9:30–5:30</div>
+      <span class="block-tag tag-work">Work</span>
+    </div>
+  </div>
+
+  <div class="section-label">Evening — Light Day 🧘</div>
+  <div class="block">
+    <div class="block-time">5:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Walk Lumi</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">6:00</div>
+    <div class="block-card accent-gold">
+      <div class="block-title">Lumi content — edit + schedule</div>
+      <div class="block-note">1 hr</div>
+      <span class="block-tag tag-content">Content</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:00</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Wind-down yoga only</div>
+      <div class="block-note">20–30 min · Light · Day before Pilates</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Free evening</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">11:00</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Reading</div>
+      <div class="block-note">30 min · No screens · 11:30pm sleep</div>
+      <span class="block-tag tag-life">Wind Down</span>
+    </div>
+  </div>
+</div>
+
+<!-- FRIDAY -->
+<div class="content" id="day-4">
+  <div class="section-label">Morning</div>
+  <div class="block">
+    <div class="block-time">7:00</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Wake up + walk Lumi</div>
+      <div class="block-note">~20 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:20</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Morning stretch</div>
+      <div class="block-note">5–10 min · While Lumi eats</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">7:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Shower + get ready</div>
+      <div class="block-note">30–40 min</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:10</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Breakfast</div>
+      <div class="block-note">Sit down · Eat something real · Non-negotiable</div>
+      <span class="block-tag tag-life">Health</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">8:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">At desk (flexed hours)</div>
+    </div>
+  </div>
+
+  <div class="section-label">Work — Flexed Hours</div>
+  <div class="block">
+    <div class="block-time">8:30</div>
+    <div class="block-card accent-blue">
+      <div class="block-title">NTI — WFH (flexed)</div>
+      <div class="block-note">8:30–4:30 to make Pilates</div>
+      <span class="block-tag tag-work">Work</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">12:00</div>
+    <div class="block-card accent-purple">
+      <div class="block-title">Job search</div>
+      <div class="block-note">45 min · Lunch block · Job boards, follow-ups</div>
+      <span class="block-tag tag-jobs">Job Search</span>
+    </div>
+  </div>
+
+  <div class="section-label">Evening</div>
+  <div class="block">
+    <div class="block-time">4:30</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Pilates ✨</div>
+      <div class="block-note">Recurring — protect this</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">5:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Home + wind-down</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">6:00</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Wedding planning check-in</div>
+      <div class="block-note">30 min · Review tasks, follow-ups, tracker</div>
+      <span class="block-tag tag-life">Wedding</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">6:30</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Free evening / date night</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">11:00</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Reading</div>
+      <div class="block-note">30 min · No screens · 11:30pm sleep</div>
+      <span class="block-tag tag-life">Wind Down</span>
+    </div>
+  </div>
+</div>
+
+<!-- SATURDAY -->
+<div class="content" id="day-5">
+  <div class="easy-day">
+    <div class="icon">🐾</div>
+    <p><strong>Light day.</strong><br>Sleep in, slow morning, walk Lumi.</p>
+  </div>
+
+  <div class="section-label">One commitment</div>
+  <div class="block">
+    <div class="block-time">~10am</div>
+    <div class="block-card accent-gold">
+      <div class="block-title">Lumi batch filming</div>
+      <div class="block-note">1–2 hrs when light is good · Film 3–5 clips for the week ahead</div>
+      <span class="block-tag tag-content">Content</span>
+    </div>
+  </div>
+
+  <div class="section-label">Rest of the day</div>
+  <div class="easy-day" style="margin-top:0">
+    <div class="icon">🌿</div>
+    <p>Trips · Day trips · Nature · Shopping<br>Life is yours.</p>
+  </div>
+
+  <div class="block">
+    <div class="block-time">11:00</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Reading</div>
+      <div class="block-note">30 min · No screens · 11:30pm sleep</div>
+      <span class="block-tag tag-life">Wind Down</span>
+    </div>
+  </div>
+</div>
+
+<!-- SUNDAY -->
+<div class="content" id="day-6">
+  <div class="easy-day">
+    <div class="icon">☀️</div>
+    <p><strong>Rest day.</strong><br>Morning is fully yours — no obligations.</p>
+  </div>
+
+  <div class="section-label">Afternoon</div>
+  <div class="block">
+    <div class="block-time">~5pm</div>
+    <div class="block-card accent-green">
+      <div class="block-title">Run #2</div>
+      <div class="block-note">30–45 min · Easy recovery pace</div>
+      <span class="block-tag tag-fitness">Fitness</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">~6pm</div>
+    <div class="block-card accent-gold">
+      <div class="block-title">Content calendar review</div>
+      <div class="block-note">30 min · Queue + schedule the whole week</div>
+      <span class="block-tag tag-content">Content</span>
+    </div>
+  </div>
+
+  <div class="section-label">Evening</div>
+  <div class="block">
+    <div class="block-time">Evening</div>
+    <div class="block-card accent-muted">
+      <div class="block-title">Prep for Monday</div>
+      <div class="block-note">Light wind-down</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="block-time">11:00</div>
+    <div class="block-card accent-coral">
+      <div class="block-title">Reading</div>
+      <div class="block-note">30 min · No screens · 11:30pm sleep</div>
+      <span class="block-tag tag-life">Wind Down</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const FULL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const DATE_LABELS = [
+    'Monday — WFH',
+    'Tuesday — Office (Team Day)',
+    'Wednesday — Flex Day',
+    'Thursday — Light Day',
+    'Friday — Pilates Day ✨',
+    'Saturday — Your Day',
+    'Sunday — Rest + Run'
+  ];
+
+  function getTodayIndex() {
+    const d = new Date().getDay(); // 0=Sun,1=Mon...6=Sat
+    return d === 0 ? 6 : d - 1;   // Convert to Mon=0...Sun=6
+  }
+
+  function showDay(idx) {
+    document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.day-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('day-' + idx).classList.add('active');
+    document.querySelectorAll('.day-btn')[idx].classList.add('active');
+  }
+
+  function init() {
+    const todayIdx = getTodayIndex();
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    document.getElementById('todayLabel').textContent = dateStr;
+
+    // Mark today's button
+    const btns = document.querySelectorAll('.day-btn');
+    btns[todayIdx].classList.add('today-btn');
+
+    showDay(todayIdx);
+  }
+
+  init();
+</script>
+</body>
+</html>
